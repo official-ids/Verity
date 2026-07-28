@@ -1,5 +1,0 @@
-::
-Carousel Generator
-Image carousel builder with modern UI and animations
-https://tools-nextoris.vercel.app/carousel-generator
-::
