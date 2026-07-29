@@ -13,10 +13,13 @@ router = Router()
 @router.message(Command("start"))
 async def cmd_start(message: Message):
     """Handle /start command."""
+    # ✅ ВАЖНО: передаем message.from_user.id как целое число (int), а не строку!
+    user_id_int = message.from_user.id 
+    
     async with await db.get_session() as session:
         user_service = UserService(session)
         user = await user_service.get_or_create_user(
-            telegram_id=str(message.from_user.id),
+            telegram_id=user_id_int,  # <--- УБРАЛИ str()
             username=message.from_user.username,
             first_name=message.from_user.first_name,
             last_name=message.from_user.last_name
@@ -42,7 +45,7 @@ async def cmd_start(message: Message):
         reply_markup=get_main_keyboard()
     )
     
-    if message.from_user.id == ADMIN_ID:
+    if user_id_int == ADMIN_ID:
         await message.answer(
             "🔧 Вы администратор. Используйте /admin для доступа к панели управления.",
             reply_markup=get_admin_keyboard()
