@@ -59,6 +59,17 @@ async def handle_webhook(request: web.Request):
         logger.error(f"Webhook error: {e}")
         return web.Response(text="Error", status=500)
 
+
+async def health_check(request: web.Request):
+    """Health check endpoint for Render."""
+    return web.Response(text="✅ Bot is alive!")
+
+# Создаем приложение
+app = web.Application()
+app.router.add_post("/webhook", handle_webhook)
+app.router.add_get("/", health_check)  # <-- ДОБАВЬ ЭТУ СТРОКУ
+app.on_startup.append(on_startup)        
+
 # Создаем приложение
 app = web.Application()
 app.router.add_post("/webhook", handle_webhook)

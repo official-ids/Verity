@@ -36,7 +36,7 @@ async def handle_ai_message(message: Message):
         
         # Get or create user
         user = await user_service.get_or_create_user(
-            telegram_id=str(message.from_user.id),
+            telegram_id=message.from_user.id,
             username=message.from_user.username,
             first_name=message.from_user.first_name,
             last_name=message.from_user.last_name
