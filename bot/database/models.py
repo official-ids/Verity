@@ -11,6 +11,8 @@ class User(Base):
     username = Column(String, nullable=True)
     first_name = Column(String, nullable=True)
     last_name = Column(String, nullable=True)
+    hf_api_key = Column(String, nullable=True)
+    api_key_set = Column(Boolean, default=False)
     language = Column(String, default="ru")
     current_model = Column(String, default="meta-llama/Meta-Llama-3-8B-Instruct")
     temperature = Column(Float, default=0.7)
