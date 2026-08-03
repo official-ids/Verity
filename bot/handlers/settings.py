@@ -348,11 +348,18 @@ async def save_api_key(message: Message, state: FSMContext):
         # Сохраняем ключ
         user.hf_api_key = api_key
         user.api_key_set = True
+        
+        # Принудительно делаем flush перед commit для гарантии записи
+        await session.flush()
         await session.commit()
         
-        # Проверяем что сохранилось
+        # Проверяем что сохранилось (перечитываем из БД)
         await session.refresh(user)
         logger.info(f"✅ API key saved: api_key_set={user.api_key_set}, hf_api_key={'***' + user.hf_api_key[-4:] if user.hf_api_key else 'None'}")
+        
+        # Финальная проверка - читаем пользователя заново из БД
+        check_user = await user_service.get_user(message.from_user.id)
+        logger.info(f"🔐 Final DB check: api_key_set={check_user.api_key_set if check_user else 'N/A'}")
     
     await message.answer(
         "✅ **API ключ успешно сохранен!**\n\n"
