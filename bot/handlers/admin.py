@@ -57,15 +57,18 @@ async def admin_users_callback(callback: CallbackQuery):
         user_service = UserService(session)
         users = await user_service.get_all_users()
         
-        text = "👥 **Пользователи:**\n\n"
+        text = "👥 Пользователи:\n\n" # Убрал ** здесь, чтобы не ломалось
         for user in users[:20]:
             status = "🚫" if user.is_blocked else "✅"
-            text += f"{status} @{user.username or 'N/A'} ({user.telegram_id})\n"
+            # Экранируем никнейм, если он есть, или пишем N/A
+            username = user.username.replace("_", "\\_").replace("*", "\\*") if user.username else "N/A"
+            text += f"{status} @{username} (`{user.telegram_id}`)\n"
         
         if len(users) > 20:
             text += f"\n... и ещё {len(users) - 20}"
         
-        await callback.message.edit_text(text)
+        # ✅ ДОБАВЛЕНО: parse_mode=None, чтобы Telegram не пытался парсить никнеймы как Markdown
+        await callback.message.edit_text(text, parse_mode=None)
 
 
 # Admin errors
