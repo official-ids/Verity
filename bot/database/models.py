@@ -7,18 +7,18 @@ class User(Base):
     __tablename__ = "users"
     
     id = Column(Integer, primary_key=True)
-    telegram_id = Column(String, unique=True, nullable=False, index=True)
+    # ✅ ИСПРАВЛЕНО: Integer вместо String!
+    telegram_id = Column(Integer, unique=True, nullable=False, index=True) 
     username = Column(String, nullable=True)
     first_name = Column(String, nullable=True)
     last_name = Column(String, nullable=True)
     hf_api_key = Column(String, nullable=True)
-    api_key_set = Column(Boolean, default=False)
+    api_key_set = Column(Boolean, default=False) # ✅ Оставили только один раз
     language = Column(String, default="ru")
     current_model = Column(String, default="meta-llama/Meta-Llama-3-8B-Instruct")
     temperature = Column(Float, default=0.7)
     system_prompt = Column(Text, default="Ты полезный AI-ассистент.")
     is_blocked = Column(Boolean, default=False)
-    api_key_set = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -72,5 +72,5 @@ class ErrorLog(Base):
     id = Column(Integer, primary_key=True)
     error_type = Column(String, nullable=False)
     error_message = Column(Text, nullable=False)
-    user_id = Column(String, nullable=True)
+    user_id = Column(Integer, nullable=True) # ✅ Тоже лучше Integer
     created_at = Column(DateTime, default=datetime.utcnow)
