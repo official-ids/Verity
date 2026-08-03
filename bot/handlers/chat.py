@@ -42,6 +42,8 @@ async def handle_ai_message(message: Message):
             last_name=message.from_user.last_name
         )
         
+        logger.info(f"🔍 AI Chat check for user {message.from_user.id}: api_key_set={user.api_key_set}, hf_api_key={'***' + user.hf_api_key[-4:] if user.hf_api_key else 'None'}")
+        
         # Check if blocked
         if user.is_blocked:
             await message.answer("❌ Ваш аккаунт заблокирован.")
@@ -49,6 +51,7 @@ async def handle_ai_message(message: Message):
         
         # Check API key set
         if not user.api_key_set:
+            logger.warning(f"⚠️ API key not set for user {message.from_user.id}")
             await message.answer(
                 "⚠️ Сначала настройте API ключ Hugging Face в разделе ⚙️ Настройки → 🔑 API Key"
             )

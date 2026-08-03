@@ -88,7 +88,7 @@ async def set_temperature(message: Message, state: FSMContext):
         if 0.1 <= temp <= 1.0:
             async with await db.get_session() as session:
                 user_service = UserService(session)
-                user = await user_service.get_user(str(message.from_user.id))
+                user = await user_service.get_user(message.from_user.id)
                 
                 if user:
                     await user_service.update_user_settings(user, temperature=temp)
@@ -175,7 +175,7 @@ async def set_prompt(message: Message, state: FSMContext):
     """Save system prompt."""
     async with await db.get_session() as session:
         user_service = UserService(session)
-        user = await user_service.get_user(str(message.from_user.id))
+        user = await user_service.get_user(message.from_user.id)
         
         if user:
             await user_service.update_user_settings(user, system_prompt=message.text)
@@ -317,6 +317,8 @@ async def save_api_key(message: Message, state: FSMContext):
     """Save API key."""
     api_key = message.text.strip()
     
+    logger.info(f"💾 Save API key for user: telegram_id={message.from_user.id} (type: {type(message.from_user.id).__name__})")
+    
     # Простая валидация: ключи HF начинаются на hf_
     if not api_key.startswith("hf_"):
         await message.answer(
@@ -328,17 +330,29 @@ async def save_api_key(message: Message, state: FSMContext):
     
     async with await db.get_session() as session:
         user_service = UserService(session)
-        user = await user_service.get_or_create_user(
-            telegram_id=message.from_user.id,
-            username=message.from_user.username,
-            first_name=message.from_user.first_name,
-            last_name=message.from_user.last_name
-        )
+        
+        # Проверяем, существует ли пользователь
+        user = await user_service.get_user(message.from_user.id)
+        logger.info(f"🔍 User found: {user is not None}")
+        
+        if not user:
+            # Создаём нового пользователя если не существует
+            user = await user_service.get_or_create_user(
+                telegram_id=message.from_user.id,
+                username=message.from_user.username,
+                first_name=message.from_user.first_name,
+                last_name=message.from_user.last_name
+            )
+            logger.info(f"➕ Created new user with id={user.id}")
         
         # Сохраняем ключ
         user.hf_api_key = api_key
         user.api_key_set = True
         await session.commit()
+        
+        # Проверяем что сохранилось
+        await session.refresh(user)
+        logger.info(f"✅ API key saved: api_key_set={user.api_key_set}, hf_api_key={'***' + user.hf_api_key[-4:] if user.hf_api_key else 'None'}")
     
     await message.answer(
         "✅ **API ключ успешно сохранен!**\n\n"

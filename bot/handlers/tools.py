@@ -125,9 +125,10 @@ async def process_function(message: Message, state: FSMContext):
         chat_service = ChatHistoryService(session)
         stats_service = UsageStatsService(session)
         
-        user = await user_service.get_user(str(message.from_user.id))
+        user = await user_service.get_user(message.from_user.id)
         
         if not user or not user.api_key_set:
+            logger.warning(f"⚠️ API key check failed for user {message.from_user.id}: user_exists={user is not None}, api_key_set={user.api_key_set if user else 'N/A'}")
             await message.answer("⚠️ Сначала настройте API ключ в разделе Настройки")
             await state.clear()
             return
