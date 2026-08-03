@@ -16,7 +16,8 @@ from utils.logger import logger
 import io
 
 router = Router()
-
+class ApiKeyState(StatesGroup):
+    api_key = State()
 
 # Settings handlers
 @router.callback_query(F.data == "settings_menu")
@@ -33,7 +34,7 @@ async def settings_model_callback(callback: CallbackQuery):
     """Show model selection."""
     async with await db.get_session() as session:
         user_service = UserService(session)
-        user = await user_service.get_user(str(callback.from_user.id))
+        user = await user_service.get_user(callback.from_user.id)
         
         if user:
             keyboard = get_models_inline_keyboard(user.current_model)
@@ -50,7 +51,7 @@ async def select_model_callback(callback: CallbackQuery):
     
     async with await db.get_session() as session:
         user_service = UserService(session)
-        user = await user_service.get_user(str(callback.from_user.id))
+        user = await user_service.get_user(callback.from_user.id)
         
         if user:
             await user_service.update_user_settings(user, current_model=model)
@@ -118,7 +119,7 @@ async def confirm_clear_callback(callback: CallbackQuery):
     async with await db.get_session() as session:
         chat_service = ChatHistoryService(session)
         user_service = UserService(session)
-        user = await user_service.get_user(str(callback.from_user.id))
+        user = await user_service.get_user(callback.from_user.id)
         
         if user:
             await chat_service.clear_history(user.id)
@@ -143,7 +144,7 @@ async def new_chat_callback(callback: CallbackQuery):
     async with await db.get_session() as session:
         chat_service = ChatHistoryService(session)
         user_service = UserService(session)
-        user = await user_service.get_user(str(callback.from_user.id))
+        user = await user_service.get_user(callback.from_user.id)
         
         if user:
             await chat_service.clear_history(user.id)
@@ -203,7 +204,7 @@ async def profile_stats_callback(callback: CallbackQuery):
         user_service = UserService(session)
         stats_service = UsageStatsService(session)
         
-        user = await user_service.get_user(str(callback.from_user.id))
+        user = await user_service.get_user(callback.from_user.id)
         
         if user:
             stats = await stats_service.get_stats(user.id)
@@ -229,7 +230,7 @@ async def profile_history_callback(callback: CallbackQuery):
         chat_service = ChatHistoryService(session)
         user_service = UserService(session)
         
-        user = await user_service.get_user(str(callback.from_user.id))
+        user = await user_service.get_user(callback.from_user.id)
         
         if user:
             history = await chat_service.get_history(user.id, limit=10)
@@ -253,7 +254,7 @@ async def profile_favorites_callback(callback: CallbackQuery):
         fav_service = FavoriteService(session)
         user_service = UserService(session)
         
-        user = await user_service.get_user(str(callback.from_user.id))
+        user = await user_service.get_user(callback.from_user.id)
         
         if user:
             favorites = await fav_service.get_favorites(user.id)
@@ -289,3 +290,61 @@ async def util_random_callback(callback: CallbackQuery):
     """Generate random number."""
     number = generate_random_number(1, 100)
     await callback.message.answer(f"🎲 **Случайное число:** {number}")
+
+# API Key handlers
+@router.callback_query(F.data == "settings_api_key")
+async def settings_api_key_callback(callback: CallbackQuery, state: FSMContext):
+    """Show API key settings."""
+    await callback.message.answer(
+        " **Настройка API ключа Hugging Face**\n\n"
+        "Отправь мне свой API ключ Hugging Face.\n\n"
+        "📌 **Где взять:**\n"
+        "1. Зайди на https://huggingface.co/settings/tokens\n"
+        "2. Создай новый токен (тип: **Read**)\n"
+        "3. Скопируй его (начинается на `hf_...`)\n"
+        "4. Отправь его сюда\n\n"
+        "️ Ключ хранится безопасно и используется только для генерации ответов.\n\n"
+        "/cancel - отменить",
+        parse_mode="Markdown",
+        reply_markup=get_back_keyboard()
+    )
+    await state.set_state(ApiKeyState.api_key)
+    await callback.answer()
+
+
+@router.message(ApiKeyState.api_key)
+async def save_api_key(message: Message, state: FSMContext):
+    """Save API key."""
+    api_key = message.text.strip()
+    
+    # Простая валидация: ключи HF начинаются на hf_
+    if not api_key.startswith("hf_"):
+        await message.answer(
+            "❌ Неверный формат ключа. Ключи Hugging Face начинаются на `hf_`.\n\n"
+            "Попробуй ещё раз или нажми /cancel для отмены.",
+            reply_markup=get_back_keyboard()
+        )
+        return
+    
+    async with await db.get_session() as session:
+        user_service = UserService(session)
+        user = await user_service.get_or_create_user(
+            telegram_id=message.from_user.id,
+            username=message.from_user.username,
+            first_name=message.from_user.first_name,
+            last_name=message.from_user.last_name
+        )
+        
+        # Сохраняем ключ
+        user.hf_api_key = api_key
+        user.api_key_set = True
+        await session.commit()
+    
+    await message.answer(
+        "✅ **API ключ успешно сохранен!**\n\n"
+        "Теперь ты можешь пользоваться AI-чатом.\n"
+        "Перейди в главное меню и выбери '🤖 AI Чат'.",
+        parse_mode="Markdown",
+        reply_markup=get_main_keyboard()
+    )
+    await state.clear()

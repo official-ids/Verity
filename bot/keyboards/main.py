@@ -171,6 +171,9 @@ def get_settings_inline_keyboard() -> InlineKeyboardMarkup:
             InlineKeyboardButton(text="📝 Системный промпт", callback_data="settings_prompt"),
         ],
         [
+            InlineKeyboardButton(text="🔑 API Key", callback_data="settings_api_key"),  # ✅ ДОБАВЛЕНО
+        ],
+        [
             InlineKeyboardButton(text="🗑 Очистить историю", callback_data="settings_clear"),
             InlineKeyboardButton(text="🔄 Новый чат", callback_data="settings_new_chat"),
         ],
